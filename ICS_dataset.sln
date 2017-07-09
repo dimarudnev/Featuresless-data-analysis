@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Featuresless-data-analysis", "ICS_dataset\Featuresless-data-analysis.pyproj", "{0E15B3D4-495A-4872-BC1E-511D5AA97F74}"
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "TalkingDataAnalysis", "..\TalkingDataAnalysis\TalkingDataAnalysis\TalkingDataAnalysis.pyproj", "{A51BD493-5FDA-49BD-AEBC-FE45CFF41780}"
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "MLBootCamp3", "..\MLBootCamp3\MLBootCamp3\MLBootCamp3.pyproj", "{8AFA3BC5-3020-4207-BEF4-CA16AA07D83A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0E15B3D4-495A-4872-BC1E-511D5AA97F74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E15B3D4-495A-4872-BC1E-511D5AA97F74}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A51BD493-5FDA-49BD-AEBC-FE45CFF41780}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A51BD493-5FDA-49BD-AEBC-FE45CFF41780}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8AFA3BC5-3020-4207-BEF4-CA16AA07D83A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AFA3BC5-3020-4207-BEF4-CA16AA07D83A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
