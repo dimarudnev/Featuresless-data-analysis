@@ -1,6 +1,2 @@
-﻿################################################################################
-# Данный GITIGNORE-файл был автоматически создан Microsoft(R) Visual Studio.
-################################################################################
-
-/.vs/Featuresless-data-analysis/v14
-/.vs/Featuresless-data-analysis/v15
+﻿.vs/**/*.*
+featuresless-data-analysis/__pycache__/**/*.*
