@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26430.13
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Featuresless-data-analysis", "ICS_dataset\Featuresless-data-analysis.pyproj", "{0E15B3D4-495A-4872-BC1E-511D5AA97F74}"
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Featuresless-data-analysis", "featuresless-data-analysis\Featuresless-data-analysis.pyproj", "{0E15B3D4-495A-4872-BC1E-511D5AA97F74}"
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "TalkingDataAnalysis", "..\TalkingDataAnalysis\TalkingDataAnalysis\TalkingDataAnalysis.pyproj", "{A51BD493-5FDA-49BD-AEBC-FE45CFF41780}"
 EndProject
