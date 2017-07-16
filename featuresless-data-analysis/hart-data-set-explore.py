@@ -12,6 +12,10 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import make_scorer, matthews_corrcoef, roc_auc_score, accuracy_score, f1_score, confusion_matrix, classification_report
 from sklearn.manifold import MDS
+from scipy.spatial.distance import euclidean
+from fastdtw import fastdtw
+from dtw import dtw
+import progressbar
 ROOT_DATA_PATH = r'C:\Data\hart-data-set\RawData'
 
 
@@ -129,10 +133,14 @@ if __name__ == '__main__':
         return res, resLabels
 
     def calcSecondaryFeatures(basis, objects, dictanceFunc):
-        return [[dictanceFunc(row, b) for b in basis] for row in objects]
+        pregressbar = progressbar.ProgressBar()
+        return [[dictanceFunc(row, b) for b in basis] for row in pregressbar(objects)]
+            
 
     def correlateDistance(object1: dict, object2: dict) -> int:
         return max(sum([np.correlate(object1[k], object2[k]) for k in object1.keys()]))
+    def dtwDistance(object1: dict, object2: dict)-> int:
+        return sum([fastdtw(object1[k], object2[k], dist=euclidean)[0] for k in object1.keys()])
 
     def plot_secondary_features(source_s, labels):
         print("----visualize----")
@@ -175,7 +183,7 @@ if __name__ == '__main__':
         print("\t(%s) ----secondary features----" % title)
         source_s = np.array(calcSecondaryFeatures(basis, values, distanceFunc))
         if plot:
-            plot_secondary_features(source_s)
+            plot_secondary_features(source_s, labels)
 
         print("\t(%s) ----classification----" % title)
 
@@ -208,18 +216,19 @@ if __name__ == '__main__':
             values.append(v['values'])
 
 
-    
-        results1 = []
-        for i in range(0, 10):
-            expirementRes = performExpirement("Different types %s" % i, values, labels, correlateDistance, generateBasis);
-            results1.append(expirementRes)
-        results2= []
-        for i in range(0, 10):
-            expirementRes = performExpirement("Random basis %s" % i, values, labels, correlateDistance, randomBasis);
-            results2.append(expirementRes)
+        performExpirement("DWT", values, labels, dtwDistance, generateBasis, plot=True)
+
+        #results1 = []
+        #for i in range(0, 10):
+        #    expirementRes = performExpirement("Different types %s" % i, values, labels, correlateDistance, generateBasis);
+        #    results1.append(expirementRes)
+        #results2= []
+        #for i in range(0, 10):
+        #    expirementRes = performExpirement("Random basis %s" % i, values, labels, correlateDistance, randomBasis);
+        #    results2.append(expirementRes)
         
-        plt.figure()
-        plt.boxplot([results1, results2]);
+        #plt.figure()
+        #plt.boxplot([results1, results2]);
 
 
 
