@@ -16,8 +16,10 @@ from scipy.spatial.distance import euclidean
 from fastdtw import fastdtw
 from dtw import dtw
 import progressbar
-ROOT_DATA_PATH = r'C:\Data\hart-data-set\RawData'
 
+from sklearn.semi_supervised import LabelSpreading
+ROOT_DATA_PATH = r'C:\Data\hart-data-set\RawData'
+ROOT_PATH = r'C:\Data\hart-data-set'
 
 if __name__ == '__main__':
     def readSource(dataType, expId, userId):
@@ -166,11 +168,74 @@ if __name__ == '__main__':
 
     plot_exp_series(1,1, labels)
     
+    
+    def RandomForestClassifierWrapper(X_train, y_train, X_test):
+        clf = RandomForestClassifier()
+        clf.fit(X_train, y_train)
+        return clf.predict(X_test)
+    def LabelSpreadingWrapper(X_train, y_train, X_test):
+        clf = LabelSpreading(
+            kernel= 'knn',
+            n_neighbors=10,
+            n_jobs =-1,
+            max_iter=1000,
+            alpha=0.1
+            )
+        newlabels = np.concatenate((np.array(y_train), -np.ones(len(X_test))))
+        clf.fit(np.concatenate((X_train, X_test)), newlabels);
+        return clf.transduction_[-len(X_test):]
+    #def CPLELearningWrapper(X_train, y_train, X_test):
+    #    from frameworks.CPLELearning import CPLELearningModel
+    #    #clf = RandomForestClassifier()
+    #    from sklearn.linear_model.stochastic_gradient import SGDClassifier
+    #    clf=  SGDClassifier(loss='log', penalty='l1')
+    #    ssmodel = CPLELearningModel(clf)
+    #    newlabels = np.concatenate((np.array(y_train), -np.ones(len(X_test))))
+    #    ssmodel.fit(np.concatenate((X_train, X_test)), newlabels)
+    #    return ssmodel.predict(X_test)
+    def SelfTraingWrapper(X_train, y_train, X_test):
+        from frameworks.SelfLearning import SelfLearningModel
+        clf = RandomForestClassifier()   
+        ssmodel = SelfLearningModel(clf)
+        newlabels = np.concatenate((np.array(y_train), -np.ones(len(X_test))))
+        ssmodel.fit(np.concatenate((X_train, X_test)), newlabels)
+        return ssmodel.predict(X_test)
+
+    def performTestSizeClassification(source_s, labels, classificationDict):
+        plt.figure();
+       
+        for clfName, clf in classificationDict.items():
+            results = [];
+            print("\t classificator %s" % clfName)
+            pregressbar = progressbar.ProgressBar()
+            for testSize in pregressbar(np.arange(0.8, 0.99, 0.01)):
+                results1 = [];
+                for i in range(1, 2):
+                    X_train, X_test, y_train, y_test = train_test_split(source_s, labels, test_size=testSize)
+                    preds = clf(X_train, y_train, X_test)
+                    results1.append(accuracy_score(preds, y_test))
+                results.append(np.mean(results1))
+            plt.plot(np.arange(0.8, 0.99, 0.01), results, label=clfName)
+        plt.legend()
+        #performDirectClassification();
+                    
+    def performDirectClassification(source_s, labels):
+        results=[]
+        sourceX = pd.DataFrame(pd.read_csv(os.path.join(ROOT_PATH, "Train", "X_train.txt"), delimiter=" ", header=None))
+        sourceY = pd.DataFrame(pd.read_csv(os.path.join(ROOT_PATH, "Train", "y_train.txt"), delimiter=" ", header=None, names="Y"))['Y'].values
+        
+        for testSize in np.arange(0.8, 0.99, 0.01):
+            results3 = []
+            for i in range(1, 2):
+                results3.append(directExpirement(sourceX, sourceY, testSize))
+            results.append(np.mean(results3))
+        plt.plot(np.arange(0.8, 0.99, 0.01), results)
     def performExpirement(title, 
                           values, 
                           labels, 
                           distanceFunc, 
-                          generateBasisFunc, 
+                          generateBasisFunc,
+                          classificationDict,
                           plot=False):
         print("-------------------------------------------")
         print("Start %s" % title)
@@ -186,25 +251,17 @@ if __name__ == '__main__':
             plot_secondary_features(source_s, labels)
 
         print("\t(%s) ----classification----" % title)
-
-        #trainX, testX, trainY, testY = train_test_split(source_s, labels, train_size = .1)
-        #clf = RandomForestClassifier()
-        #clf.fit(trainX, trainY)
-        #preds = clf.predict(testX)
-   
-
-        # exp results
-        clf = RandomForestClassifier()
-        acc =  cross_val_score(clf, source_s, labels, cv=5, n_jobs=8).mean();
-        print("\t({}) accuracy_score: {:.3f}".format(title, acc))
-        #print("roc_auc_score: {:.3f}".format(roc_auc_score(testY, preds)))
-        #print("mcc: {:.3f}".format(matthews_corrcoef(testY, preds)))
-        #print("f1: {:.3f}".format(f1_score(testY, preds)))
-        #print("({}) confusion matrix:\n%s" % confusion_matrix(testY, preds))
-
+        performTestSizeClassification(source_s, labels, classificationDict)
+        acc = 0
         print("End %s" % title)
         return acc
-
+    def directExpirement(sourceX, sourceY, testSize):
+       
+        X_train, X_test, y_train, y_test = train_test_split(sourceX, sourceY, test_size=testSize)
+        clf = RandomForestClassifier()
+        clf.fit(X_train, y_train)
+        preds = clf.predict(X_test)
+        return accuracy_score(preds, y_test)
     with open('hart_data.json', 'r') as fp:
 
         print("----read data----")
@@ -216,7 +273,19 @@ if __name__ == '__main__':
             values.append(v['values'])
 
 
-        performExpirement("DWT", values, labels, dtwDistance, generateBasis, plot=True)
+        performExpirement(
+            title="Sample expirenemt",
+            values= values, 
+            labels= labels, 
+            distanceFunc=correlateDistance, 
+            generateBasisFunc= generateBasis,
+            classificationDict= {
+                #'CPLELearningWrapper': CPLELearningWrapper,
+                'SelfTraingWrapper': SelfTraingWrapper,
+                'RandomForestClassifierWrapper': RandomForestClassifierWrapper,
+                'LabelSpreadingWrapper': LabelSpreadingWrapper
+                },
+            plot=False)
 
         #results1 = []
         #for i in range(0, 10):
