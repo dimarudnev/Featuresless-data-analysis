@@ -20,6 +20,17 @@ from functools import reduce
 
 datadir = 'C:\\Data\\ics-data-set\\binaryAllNaturalPlusNormalVsAttacks'
 
+def readICSDataset():
+    source = readData(1)
+    for i in range(2, 15):
+        source = source.append(readData(i), ignore_index=True)
+
+    source = source.replace(np.inf, np.nan).fillna(0)
+
+    sourceY = [1 if marker== 'Attack' else 0 for marker in source['marker']]
+    sourceX = source.drop(['marker'], axis=1)
+    return sourceX, sourceY
+
 if __name__ == '__main__':
     def readData(fileIndex):
         return pd.read_csv(os.path.join(datadir, 'data%d.csv' % fileIndex))
@@ -91,15 +102,7 @@ if __name__ == '__main__':
         forest.fit(trainX, trainY)
         return lambda array: array * forest.feature_importances_ 
 
-    source = readData(1)
-    for i in range(2, 15):
-        source = source.append(readData(i), ignore_index=True)
-
-    source = source.replace(np.inf, np.nan).fillna(0)
-    elementNames = ['R1', 'R2', 'R3', 'R4']
-
-    sourceY = [1 if marker== 'Attack' else 0 for marker in source['marker']]
-    sourceX = source.drop(['marker'], axis=1)
+    sourceX, sourceY = readICSDataset()
 
     trainX, testX, trainY, testY = train_test_split(sourceX, sourceY, train_size = 2000, test_size= 20000)
 

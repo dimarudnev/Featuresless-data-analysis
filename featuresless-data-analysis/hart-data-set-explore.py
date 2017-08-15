@@ -1,3 +1,4 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
@@ -16,41 +17,57 @@ from scipy.spatial.distance import euclidean
 from fastdtw import fastdtw
 from dtw import dtw
 import progressbar
+from cycler import cycler
 
 from sklearn.semi_supervised import LabelSpreading
 ROOT_DATA_PATH = r'C:\Data\hart-data-set\RawData'
 ROOT_PATH = r'C:\Data\hart-data-set'
 
 if __name__ == '__main__':
+    monochrome = (cycler('color', ['k']) * cycler('marker', ['', '.']) * cycler('linestyle', ['-', '--', ':']));
+    plt.rc('axes', prop_cycle=monochrome)
+    font = {'family' : 'normal',
+        'weight' : 'bold',
+        'size'   : 30}
+
+    matplotlib.rc('font', **font)
+
     def readSource(dataType, expId, userId):
         return pd.read_csv(os.path.join(ROOT_DATA_PATH, r'%s_exp%02d_user%02d.txt' % (dataType,expId,userId)), 
                            delimiter=" ", 
                            names=(dataType+"_X", dataType+"_Y", dataType+"_Z"))
     def plotAreas(ax, labels):
         for key, values in labels.iterrows():
-            ax.text(0.5*(values['start']+values['end']), 1.5, values['act_id'],
+            ax.text(0.5*(values['start']+values['end']), 1.4, values['act_id'],
                 horizontalalignment='center',
                 verticalalignment='center',
                 fontsize=30, 
-                color='red')
-            ax.axvspan(values['start'], values['end'], facecolor='#ccdfff', alpha=0.5)
+                color='black')
+            ax.axvspan(values['start'], values['end'], facecolor='white', alpha=0.5)
 
     def plot_exp_series(expId, userId, labels):
         source_acc = readSource("acc", expId, userId)
+        source_acc.columns = ["X", "Y", "Z"]
+
         source_gyro = readSource("gyro", expId, userId) 
+        source_gyro.columns = ["X", "Y", "Z"]
 
         exp_labels = labels.loc[expId, userId]
 
 
 
-        f, (ax1, ax2) = plt.subplots(2)
+        f, (ax1) = plt.subplots(1)
         plotAreas(ax1, exp_labels)
-        ax1.plot(source_acc)
-        plotAreas(ax2, exp_labels)
-        ax2.plot(source_gyro)
+        source_acc.plot(ax=ax1, xlim =(250,2360), ylim=(-0.5, 1.5))
+        for line in ax1.lines:
+            line.set_linewidth(2)
 
 
+        #plotAreas(ax2, exp_labels)
+        #source_gyro.plot(ax=ax2)
 
+
+    
     def gererateData(labels):
         result = dict();
         for expId in labels.index.levels[0]:
@@ -108,9 +125,9 @@ if __name__ == '__main__':
                 if value['label']==label:
                     row = index // rowCount
                     col = index % colCount
-                    axarr[row, col].plot(pd.DataFrame(value["values"]))
+                    axarr[row, col].plot(pd.DataFrame(value["values"])[['acc_X', 'acc_Y', 'acc_Z']])
                     index+=1;
-    #gererateData(labels)
+    
 
     def randomBasis(values: [], labels: []):
         valuesRes = []
@@ -157,18 +174,6 @@ if __name__ == '__main__':
 
         plt.legend(handles = list([mpatches.Patch(color=mapColor(l), label="%s-%s"%(l,d)) for l, d in labelsDesc.items()]))
 
-
-    labels = pd.DataFrame(pd.read_csv(r'C:\Data\hart-data-set\RawData\labels.txt',
-     delimiter=" ",
-     names=("exp_id", "user_id", "act_id", 'start', 'end'), 
-     index_col=("exp_id", "user_id"),
-     dtype ={"act_id": np.int}
-     ))
-
-
-    plot_exp_series(1,1, labels)
-    
-    
     def RandomForestClassifierWrapper(X_train, y_train, X_test):
         clf = RandomForestClassifier()
         clf.fit(X_train, y_train)
@@ -184,19 +189,19 @@ if __name__ == '__main__':
         newlabels = np.concatenate((np.array(y_train), -np.ones(len(X_test))))
         clf.fit(np.concatenate((X_train, X_test)), newlabels);
         return clf.transduction_[-len(X_test):]
-    #def CPLELearningWrapper(X_train, y_train, X_test):
-    #    from frameworks.CPLELearning import CPLELearningModel
-    #    #clf = RandomForestClassifier()
-    #    from sklearn.linear_model.stochastic_gradient import SGDClassifier
-    #    clf=  SGDClassifier(loss='log', penalty='l1')
-    #    ssmodel = CPLELearningModel(clf)
-    #    newlabels = np.concatenate((np.array(y_train), -np.ones(len(X_test))))
-    #    ssmodel.fit(np.concatenate((X_train, X_test)), newlabels)
-    #    return ssmodel.predict(X_test)
+    def CPLELearningWrapper(X_train, y_train, X_test):
+        from frameworks.CPLELearning import CPLELearningModel
+        #clf = RandomForestClassifier()
+        from sklearn.linear_model.stochastic_gradient import SGDClassifier
+        clf=  SGDClassifier(loss='log', penalty='l1')
+        ssmodel = CPLELearningModel(clf)
+        newlabels = np.concatenate((np.array(y_train), -np.ones(len(X_test))))
+        ssmodel.fit(np.concatenate((X_train, X_test)), newlabels)
+        return ssmodel.predict(X_test)
     def SelfTraingWrapper(X_train, y_train, X_test):
         from frameworks.SelfLearning import SelfLearningModel
-        clf = RandomForestClassifier()   
-        ssmodel = SelfLearningModel(clf)
+        clf = RandomForestClassifier(warm_start=True, n_estimators=1000)   
+        ssmodel = SelfLearningModel(clf, prob_threshold=0.9)
         newlabels = np.concatenate((np.array(y_train), -np.ones(len(X_test))))
         ssmodel.fit(np.concatenate((X_train, X_test)), newlabels)
         return ssmodel.predict(X_test)
@@ -231,8 +236,10 @@ if __name__ == '__main__':
             results.append(np.mean(results3))
         plt.plot(np.arange(0.8, 0.99, 0.01), results)
     def performExpirement(title, 
-                          values, 
-                          labels, 
+                          trainX,
+                          trainY,
+                          testX,
+                          testY,
                           distanceFunc, 
                           generateBasisFunc,
                           classificationDict,
@@ -241,20 +248,27 @@ if __name__ == '__main__':
         print("Start %s" % title)
 
         print("\t(%s) ----generate basis----" % title)
-        basis, basisLabels = generateBasis(values, labels);
+        basis, basisLabels = generateBasisFunc(trainX, trainY);
         if plot:
             plot_basis(basis, basisLabels)
 
         print("\t(%s) ----secondary features----" % title)
-        source_s = np.array(calcSecondaryFeatures(basis, values, distanceFunc))
+        trainX_s = np.array(calcSecondaryFeatures(basis, trainX, distanceFunc))
         if plot:
-            plot_secondary_features(source_s, labels)
+            plot_secondary_features(trainX_s, trainY)
+        testX_s = np.array(calcSecondaryFeatures(basis, testX, distanceFunc))
+        if plot:
+            plot_secondary_features(testX_s, testY)
 
         print("\t(%s) ----classification----" % title)
-        performTestSizeClassification(source_s, labels, classificationDict)
-        acc = 0
+
+        res = dict();
+        for clfName, clf in classificationDict.items():
+            preds = clf(trainX_s, trainY, testX_s)
+            res[clfName] = accuracy_score(preds, testY)
+
         print("End %s" % title)
-        return acc
+        return res
     def directExpirement(sourceX, sourceY, testSize):
        
         X_train, X_test, y_train, y_test = train_test_split(sourceX, sourceY, test_size=testSize)
@@ -262,30 +276,98 @@ if __name__ == '__main__':
         clf.fit(X_train, y_train)
         preds = clf.predict(X_test)
         return accuracy_score(preds, y_test)
+    
+    
+    
+    
+    
+    labels = pd.DataFrame(pd.read_csv(r'C:\Data\hart-data-set\RawData\labels.txt',
+     delimiter=" ",
+     names=("exp_id", "user_id", "act_id", 'start', 'end'), 
+     index_col=("exp_id", "user_id"),
+     dtype ={"act_id": np.int}
+     ))
+
+
+    plot_exp_series(1,1, labels)
+   
+    
     with open('hart_data.json', 'r') as fp:
 
         print("----read data----")
         data = json.load(fp, object_pairs_hook=OrderedDict)
-        labels = []
-        values = []
+        
+       
+        temp = [];
+        plot_label(data, "7", 2, 2)
+
         for k,v in data.items(): # dict does not garanture order of enumeration
-            labels.append(int(v['label']))
-            values.append(v['values'])
+            keySplit = k.split("-")
+            exp = keySplit[0]
+            user = keySplit[1]
+            label = int(v['label'])
 
+            temp.append([exp, user, label])
+            
 
-        performExpirement(
-            title="Sample expirenemt",
-            values= values, 
-            labels= labels, 
-            distanceFunc=correlateDistance, 
-            generateBasisFunc= generateBasis,
-            classificationDict= {
-                #'CPLELearningWrapper': CPLELearningWrapper,
-                'SelfTraingWrapper': SelfTraingWrapper,
-                'RandomForestClassifierWrapper': RandomForestClassifierWrapper,
-                'LabelSpreadingWrapper': LabelSpreadingWrapper
-                },
-            plot=False)
+        metaData = pd.DataFrame(temp, columns=("exp", "user", "label"));
+        print("Classes count: %s" % metaData.label.unique().shape[0])   
+        print("Unique elements: %s" % metaData.user.unique().shape[0])
+        print("Total: %s" % metaData.shape[0])
+        ax123 = metaData.groupby("label").agg(['count']).plot(kind='bar', legend =False, rot =0);
+        for container in ax123.containers:
+            for patch in container.patches:
+                patch.set_hatch("/")
+        
+
+        
+        expirementResult=[];
+        for trainUser in metaData.user.unique():
+            trainX = [];
+            trainY = [];
+            testX = [];
+            testY = [];
+            for k,v in data.items():
+                user = k.split("-")[1];
+                if user == trainUser:
+                    trainX.append(v['values'])
+                    trainY.append(int(v['label']))
+                else:
+                    testX.append(v['values'])
+                    testY.append(int(v['label']))
+            
+            res = performExpirement(
+                "User " + trainUser,
+                trainX,
+                trainY,
+                testX,
+                testY,
+                distanceFunc=correlateDistance, 
+                generateBasisFunc= generateBasis,
+                classificationDict={
+                    #'CPLELearningWrapper': CPLELearningWrapper,
+                    'SelfTraingWrapper': SelfTraingWrapper,
+                    'RandomForestClassifierWrapper': RandomForestClassifierWrapper,
+                    'LabelSpreadingWrapper': LabelSpreadingWrapper
+                    }
+                );
+            print(res)
+            expirementResult.append(res)
+        plt.figure()
+        pd.DataFrame(expirementResult).boxplot();
+            #performExpirement(
+        #    title="Sample expirenemt",
+        #    values= values, 
+        #    labels= labels, 
+        #    distanceFunc=correlateDistance, 
+        #    generateBasisFunc= generateBasis,
+        #    classificationDict= {
+        #        #'CPLELearningWrapper': CPLELearningWrapper,
+        #        'SelfTraingWrapper': SelfTraingWrapper,
+        #        'RandomForestClassifierWrapper': RandomForestClassifierWrapper,
+        #        'LabelSpreadingWrapper': LabelSpreadingWrapper
+        #        },
+        #    plot=False)
 
         #results1 = []
         #for i in range(0, 10):
@@ -296,10 +378,8 @@ if __name__ == '__main__':
         #    expirementRes = performExpirement("Random basis %s" % i, values, labels, correlateDistance, randomBasis);
         #    results2.append(expirementRes)
         
-        #plt.figure()
-        #plt.boxplot([results1, results2]);
-
-
+       
+        
 
     print("ready")
     plt.show()
